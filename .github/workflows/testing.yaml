@@ -26,20 +26,23 @@ jobs:
       - name: "Checkout repository"
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
-      # Perform setup prior to running test(s)
-      - name: "Testing setup step"
-        shell: bash
-        run: |
-          # Testing setup step
-          echo "Testing setup step"
-          echo "Testing setup step/summary output" >> "$GITHUB_STEP_SUMMARY"
+      - name: "Running local action: ${{ github.repository }} [PATH]"
+        uses: ./
+        with:
+          path: /tmp/prescan-go-coverage-ubuntu.sh
+          # yamllint disable-line rule:line-length
+          url: "https://raw.githubusercontent.com/o-ran-sc/ci-management/refs/heads/master/jjb/com-golog/prescan-golog-go-ubuntu.sh"
+
 
       - name: "Running local action: ${{ github.repository }}"
         uses: ./
+        with:
+          # yamllint disable-line rule:line-length
+          url: "https://raw.githubusercontent.com/o-ran-sc/ci-management/refs/heads/master/jjb/com-golog/prescan-golog-go-ubuntu.sh"
 
-      - name: "Validating local action: ${{ github.repository }}"
-        shell: bash
-        run: |
-          # Local action validation
-          echo "Validating local action: ${{ github.repository }}"
-          echo "Validation step summary output" >> "$GITHUB_STEP_SUMMARY"
+      - name: "Running local action: ${{ github.repository }} [NO_CLOBBER]"
+        uses: ./
+        with:
+          no_clobber: true
+          # yamllint disable-line rule:line-length
+          url: "https://raw.githubusercontent.com/o-ran-sc/ci-management/refs/heads/master/jjb/com-golog/prescan-golog-go-ubuntu.sh"
