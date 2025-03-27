@@ -16,8 +16,7 @@ Uses WGET to download the content from a given URL.
 ```yaml
 steps:
   - name: "Download build script"
-    id: download-file
-    uses: lfit/releng-reusable-workflows/.github/actions/url-download-action@main
+    uses: lfreleng-actions/url-download-action@main
     with:
       url: https://raw.githubusercontent.com/o-ran-sc/o-du-l2/refs/heads/main/sonarqube-cloud-build.sh
 ```
