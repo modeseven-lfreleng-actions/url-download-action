@@ -8,77 +8,76 @@ description: "Uses WGET to download the content from a given URL"
 
 inputs:
   # Mandatory
-  URL:
-    description: "URL to download"
+  url:
+    description: 'URL to download'
     required: true
+    type: 'string'
   # Optional
-  EXIT_ON_FAIL:
-    description: "Exit with error if download fails"
+  exit_on_fail:
+    description: 'Exit with error if download fails'
     required: false
-    default: "true"
-  NO_CLOBBER:
-    description: "Will not overwrite existing local file"
+    type: 'boolean'
+    default: true
+  no_clobber:
+    description: 'Will not overwrite existing local file'
     required: false
-    default: "false"
-  PATH:
-    description: "Save file to this filesystem path"
+    type: 'boolean'
+    default: false
+  path:
+    description: 'Save file to this local file system path'
     required: false
+    type: 'string'
+  wget_flags:
+    description: 'Additional/supplmentary flags to wget command'
+    required: false
+    type: 'string'
+    default: '-q'
 
 runs:
-  using: "composite"
+  using: 'composite'
   steps:
-    - name: "Verify WGET is available"
+    - name: 'Download content at URL 🌍'
       shell: bash
       run: |
-        # Verify WGET is available
-        WGET_CMD=$(which wget)
-        if [ ! -x $WGET_CMD ]; then
-          echo "Unable to find/install WGET command ❌"
-          echo "Check instance type and OS environment"
+        # Download content at URL 🌍
+
+        wget_cmd=$(which wget)
+        if [ ! -x "$wget_cmd" ]; then
+          echo 'Error: WGET command not found in path ❌'
+          echo 'Check runner and operating system environment'
           exit 1
         fi
-
-    - name: "Download content at URL"
-      shell: bash
-      # yamllint disable rule:line-length
-      run: |
-        # Download content at URL ⬇️
-
         # Process inputs, set variable/parameters
-        URL="${{ inputs.url }}"
-
-        # Case insensitive matching of strings representing booleans
-        EXIT_ON_FAIL=$(echo ${{ inputs.exit_on_fail }} | tr '[:upper:]' '[:lower:]')
-        NO_CLOBBER=$(echo ${{ inputs.no_clobber }} | tr '[:upper:]' '[:lower:]')
-
-        WGET_FLAGS="-q"
-        if [ "f$NO_CLOBBER" = "ftrue" ]; then
-          WGET_FLAGS="$WGET_FLAGS --no-clobber"
+        url="${{ inputs.url }}"
+        exit_on_fail="${{ inputs.exit_on_fail }}"
+        no_clobber="${{ inputs.no_clobber }}"
+        wget_flags="${{ inputs.wget_flags }}"
+        path="${{ inputs.path }}"
+        if [ "f$no_clobber" = 'ftrue' ]; then
+          wget_flags="$wget_flags --no-clobber"
         fi
-        if [ -n "${{ inputs.path }}" ]; then
-          WGET_FLAGS="$WGET_FLAGS -O ${{ inputs.path }}"
+        if [ -n "$path" ]; then
+          wget_flags="$wget_flags -O $path"
         fi
 
-        echo "Downloading content from:"
-        echo "$URL"
+        echo "Command: $wget_cmd $wget_flags 💬"
+        echo 'Downloading:'
+        echo "$url"
 
         # Perform the download
-        wget "$URL" $WGET_FLAGS || true
+        $wget_cmd $url $wget_flags
 
-        # Validate download, exit appropriately
-
-        if [ -n "${{ inputs.path }}" ]; then
-          DOWNLOAD="${{ inputs.path }}"
+        # Validate downloaded content, exit appropriately
+        if [ -n "$path" ]; then
+          download="$path"
         else
-          DOWNLOAD=$(basename ${{ inputs.url }})
+          download=$(basename "$url")
         fi
-
-        if [ -f "$DOWNLOAD" ]; then
-          echo "Content successfully downloaded ✅"
+        if [ -f "$download" ]; then
+          echo 'Download content found in place ✅'
         else
-          echo "Error: content download failed ❌"
-          if [ "f$EXIT_ON_FAIL" = "ftrue" ]; then
-            # Dependent on the action's inputs
+          echo 'Error: content download failed ❌'
+          if [ "f$exit_on_fail" = 'ftrue' ]; then
             exit 1
           fi
         fi
