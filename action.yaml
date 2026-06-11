@@ -33,6 +33,12 @@ runs:
   steps:
     - name: 'Download content at URL 🌍'
       shell: bash
+      env:
+        INPUT_URL: ${{ inputs.url }}
+        INPUT_EXIT_ON_FAIL: ${{ inputs.exit_on_fail }}
+        INPUT_NO_CLOBBER: ${{ inputs.no_clobber }}
+        INPUT_WGET_FLAGS: ${{ inputs.wget_flags }}
+        INPUT_PATH: ${{ inputs.path }}
       run: |
         # Download content at URL 🌍
 
@@ -42,25 +48,52 @@ runs:
           echo 'Check runner and operating system environment'
           exit 1
         fi
-        # Process inputs, set variable/parameters
-        url="${{ inputs.url }}"
-        exit_on_fail="${{ inputs.exit_on_fail }}"
-        no_clobber="${{ inputs.no_clobber }}"
-        wget_flags="${{ inputs.wget_flags }}"
-        path="${{ inputs.path }}"
-        if [ "f$no_clobber" = 'ftrue' ]; then
-          wget_flags="$wget_flags --no-clobber"
-        fi
-        if [ -n "$path" ]; then
-          wget_flags="$wget_flags -O $path"
+
+        # Validate URL format (must start with http:// or https://)
+        if ! printf '%s' "$INPUT_URL" | grep -qE '^https?://'; then
+          echo "Error: URL must start with http:// or https:// ❌"
+          exit 1
         fi
 
-        echo "Command: $wget_cmd $wget_flags 💬"
+        # Validate path: reject traversal sequences. Absolute paths are a
+        # documented, supported feature (callers choose where to save the
+        # download, e.g. /tmp/...), so they are intentionally allowed; the
+        # option-injection vector is closed below by passing the output path
+        # as its own quoted argument and the URL after '--'.
+        if printf '%s' "$INPUT_PATH" | grep -qE '\.\.(/|$)'; then
+          echo "Error: path must not contain directory traversal (..) ❌"
+          exit 1
+        fi
+
+        # Process inputs, set variable/parameters
+        url="$INPUT_URL"
+        exit_on_fail="$INPUT_EXIT_ON_FAIL"
+        no_clobber="$INPUT_NO_CLOBBER"
+        path="$INPUT_PATH"
+
+        # Build the wget argument list as an array so that the output path is
+        # passed as its own quoted argument (never concatenated into an
+        # unquoted flag string) and the URL is placed after '--' so a URL
+        # beginning with '-' cannot be parsed as an option. Note: wget_flags
+        # is split on whitespace (matching the prior unquoted expansion);
+        # callers needing embedded spaces should not rely on shell quoting.
+        read -ra wget_args <<< "$INPUT_WGET_FLAGS"
+        if [ "f$no_clobber" = 'ftrue' ]; then
+          wget_args+=(--no-clobber)
+        fi
+        if [ -n "$path" ]; then
+          wget_args+=(-O "$path")
+        fi
+
+        # Print a shell-escaped representation matching the real invocation.
+        printf 'Command: %s' "$wget_cmd"
+        printf ' %q' "${wget_args[@]}" -- "$url"
+        printf ' 💬\n'
         echo 'Downloading:'
         echo "$url"
 
         # Perform the download
-        $wget_cmd $url $wget_flags
+        "$wget_cmd" "${wget_args[@]}" -- "$url"
 
         # Validate downloaded content, exit appropriately
         if [ -n "$path" ]; then
